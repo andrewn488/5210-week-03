@@ -1,0 +1,142 @@
+---
+title: "week_03_notes"
+author: "Andrew Nalundasan"
+date: "7/3/2021"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggplot2)
+library(vtable)
+library(grid)
+library(gridExtra)
+library(lattice)
+```
+
+# Tidy EDA, Steps 1 and 2
+- Analysis always begins with EDA - Exploratory Data Analysis
+- Develop understanding of the data; look for mistakes in the data
+- after a good EDA, you should have a good idea of what should be coming out of the analysis
+*What am I looking for in EDA?*
+1. things that are different that should not be
+2. things that are similar that should not be
+3. things that are relationships - variables that change in same or opposite directions (correlations)
+
+*Base EDA is a 4 step process*
+1. Uni-variate non-graphical
+- categorical (i.e. **factor**): count, proportion, %
+- quantitative: central tendancy, dispersion, skewness
+2. Uni-variate graphical
+- categorical: barplot of factors
+- quantitative: histogram (try different bin), density, boxplot, quantile-normal plot
+3. Multi-variate non-graphical
+- categorical: cross-tabulation if multiple categorical variables
+- quantitative: correlation (and covariance)
+4. Multi-variate graphical
+- categorical: tile, mosaic graph, bar graph
+- quantitative: scatter plot, correlation plot
+- categorical and quantitative: distribution/summary by level of categorical variable, bargraphs, multiple boxplots, scatter plot with color/size/shape by factor or continuous variable
+
+# Step 1 of EDA: Uni-variate non-graphical
+```{r}
+# load data
+dis <- read_csv("Disability.csv")
+
+# Recode date to age range, this is to fix an Excel formatting problem
+dis <- dis %>% 
+  mutate(age_group = recode(age_group, '12-Jun' = "6-12"))
+```
+
+## Non-graphical uni-variate analysis
+Categorical and quantitative
+```{r}
+head(dis)
+str(dis)
+summary(dis)
+vtable(dis)
+```
+
+Findings from Step 1: 
+- 1000 observations of 5 variables
+- 3 factor variables, 2 integer variables
+- need to change "12-Jun" to "6-12"
+
+Comments:
+- Age and expenditures likely right skewed so median better than mean
+Mostly White and Hispanic ethnicity
+- sample size of some ethnicity too small for statistically valid results
+- Gender is evenly mixed
+
+Question: 
+- Do expenditures vary substantially by age_group, ethnicity, or gender?
+
+# Step 2.1 of EDA: Uni-variate graphical - categorical
+- look at bar graphs of categorical variables to confirm non-graphical assumptions
+
+Comments: 
+- many more obs age 21 and under
+- previous observations confirmed
+
+Question:
+- is ethnicity distribution representative of the population?
+
+```{r}
+# code univariate bar graphs using grid.arrange so can see all quant variables
+grid.arrange(
+  dis %>% 
+    ggplot(mapping = aes(x = age_group)) + 
+    geom_bar(), 
+  dis %>% 
+    ggplot(mapping = aes(x = ethnicity)) + 
+    geom_bar(),
+  dis %>% 
+    ggplot(mapping = aes(x = gender)) + 
+    geom_bar(),
+  ncol = 2
+)
+```
+# Step 2.2 of EDA: Uni-variate graphical - quantitative
+- look at histograms and boxplots of quantitative variables to confirm non-graphical
+
+Comments: 
+- It is unusual that age and expenditures have similar distributions
+- recipients younger than 25 and many expenditures below $18,000
+- don't throw outliers out just to save summary statistics
+- you must deal with outliers based on what you're trying to model
+- if focus is on demographic age below 50, then throw out outliers
+- if focus is on all age demographics, must keep outliers in
+
+Questions:
+- Does the skewed, lump pattern hold across ethnicity, age_group, and gender?
+- what should be done about outliers?
+
+```{r}
+# code histograms using grid.arrange so can see all quant variables together
+grid.arrange(
+  dis %>% 
+    ggplot(mapping = aes(x = age)) + 
+    geom_histogram(),
+  dis %>% 
+    ggplot(mapping = aes(x = expenditures)) + 
+    geom_histogram(),
+  # Add boxplots
+  dis %>% 
+    ggplot(mapping = aes(x = 1)) +
+    geom_boxplot(mapping = aes(y = age)) + 
+    coord_flip(),    # use to have same x-axis on both graphs
+  dis %>% 
+    ggplot(mapping = aes(x = 1)) + 
+    geom_boxplot(mapping = aes(y = expenditures)) + 
+    coord_flip(), 
+  ncol = 2
+)
+```
+

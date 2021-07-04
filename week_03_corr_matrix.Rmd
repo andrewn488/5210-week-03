@@ -1,0 +1,70 @@
+---
+title: "week-03-notes"
+author: "Andrew Nalundasan"
+date: "7/3/2021"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(scales)
+library(vtable)
+library(jtools)
+library(corrplot)
+
+# load data and initial non-graphical exploration
+data(mtcars)    # load data
+head(mtcars)    # view top rows of dataset
+vtable(mtcars)  # see mtcars in vtable
+summary(mtcars) # summary statistics of mtcars
+```
+# Export Summs
+```{r}
+reg <- lm(mpg ~ cyl, mtcars)    # regress mpg on cyl
+export_summs(reg)    # export summs table of reg
+```
+# R Graphics Cookbook: Correlation Matrix 
+
+# Generate numerical correlation matrix
+
+```{r}
+mcor <- cor(mtcars, use="complete.obs")    # use="complete.obs" will get rid of NA's from dataset and remove NA's from matrix
+# Print mcor and round to 2 digits
+round(mcor, digits=2)
+```
+
+# plot the correlation matrix
+```{r}
+corrplot(mcor)
+```
+Figure: A correlation matrix
+
+# Cosmetics to correlation matrix
+
+```{r}
+# matrix with colored squares and black labels, rotated 45 degrees along the top
+
+corrplot(mcor, method = "shade", shade.col = NA, tl.col = "black", tl.srt = 45)
+```
+Figure: Correlation matrix with colored squares and black, rotated labels
+
+# Fanciest correlation matrix
+
+```{r}
+# generate a lighter palette
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+
+corrplot(mcor, method = "shade", shade.col = NA, tl.col = "black", tl.srt = 45,
+         col = col(200), addCoef.col = "black", cl.pos = "n", order = "AOE")
+
+# AOE - angular order of eigenvectors
+```
+Figure: Correlation matrix with correlation coefficients and no legend
+
