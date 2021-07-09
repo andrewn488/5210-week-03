@@ -7,7 +7,7 @@ output:
     toc: true
     toc_depth: 3
     toc_float: true
-    number_sections: true
+    number_sections: false
 ---
 
 ```{r setup, include=FALSE}
@@ -19,31 +19,43 @@ library(vtable)
 library(grid)
 library(gridExtra)
 library(lattice)
+library(janitor)
+library(GGally)
 ```
 
 # Tidy EDA, Steps 1 and 2
 - Analysis always begins with EDA - Exploratory Data Analysis
 - Develop understanding of the data; look for mistakes in the data
 - after a good EDA, you should have a good idea of what should be coming out of the analysis
-*What am I looking for in EDA?*
+
+**What am I looking for in EDA?**
+
 1. things that are different that should not be
 2. things that are similar that should not be
 3. things that are relationships - variables that change in same or opposite directions (correlations)
 
-*Base EDA is a 4 step process*
+**Base EDA is a 4 step process**
+
 1. Uni-variate non-graphical
-- categorical (i.e. **factor**): count, proportion, %
-- quantitative: central tendancy, dispersion, skewness
+
+    - categorical (i.e. **factor**): count, proportion, %
+    - quantitative: central tendancy, dispersion, skewness
+
 2. Uni-variate graphical
-- categorical: barplot of factors
-- quantitative: histogram (try different bin), density, boxplot, quantile-normal plot
+
+    - categorical: barplot of factors
+    - quantitative: histogram (try different bin), density, boxplot, quantile-normal plot
+
 3. Multi-variate non-graphical
-- categorical: cross-tabulation if multiple categorical variables
-- quantitative: correlation (and covariance)
+
+    - categorical: cross-tabulation if multiple categorical variables
+    - quantitative: correlation (and covariance)
+
 4. Multi-variate graphical
-- categorical: tile, mosaic graph, bar graph
-- quantitative: scatter plot, correlation plot
-- categorical and quantitative: distribution/summary by level of categorical variable, bargraphs, multiple boxplots, scatter plot with color/size/shape by factor or continuous variable
+    
+    - categorical: tile, mosaic graph, bar graph
+    - quantitative: scatter plot, correlation plot
+    - categorical and quantitative: distribution/summary by level of categorical variable, bargraphs, multiple boxplots, scatter plot with color/size/shape by factor or continuous variable
 
 # Step 1 of EDA: Uni-variate non-graphical
 ```{r}
@@ -64,29 +76,34 @@ summary(dis)
 vtable(dis)
 ```
 
-Findings from Step 1: 
-- 1000 observations of 5 variables
-- 3 factor variables, 2 integer variables
-- need to change "12-Jun" to "6-12"
++ Findings from Step 1
 
-Comments:
-- Age and expenditures likely right skewed so median better than mean
-Mostly White and Hispanic ethnicity
-- sample size of some ethnicity too small for statistically valid results
-- Gender is evenly mixed
+    - 1000 observations of 5 variables
+    - 3 factor variables, 2 integer variables
+    - need to change "12-Jun" to "6-12"
 
-Question: 
-- Do expenditures vary substantially by age_group, ethnicity, or gender?
+**Comments**
+
+    - Age and expenditures likely right skewed so median better than mean 
+    - Mostly White and Hispanic ethnicity
+    - sample size of some ethnicity too small for statistically valid results
+    - Gender is evenly mixed
+
+**Question** 
+
+    - Do expenditures vary substantially by age_group, ethnicity, or gender?
 
 # Step 2.1 of EDA: Uni-variate graphical - categorical
 - look at bar graphs of categorical variables to confirm non-graphical assumptions
 
-Comments: 
-- many more obs age 21 and under
-- previous observations confirmed
+**Comments**
 
-Question:
-- is ethnicity distribution representative of the population?
+    - many more obs age 21 and under
+    - previous observations confirmed
+
+**Question**
+
+    - is ethnicity distribution representative of the population?
 
 ```{r}
 # code univariate bar graphs using grid.arrange so can see all quant variables
@@ -103,20 +120,23 @@ grid.arrange(
   ncol = 2
 )
 ```
+
 # Step 2.2 of EDA: Uni-variate graphical - quantitative
 - look at histograms and boxplots of quantitative variables to confirm non-graphical
 
-Comments: 
-- It is unusual that age and expenditures have similar distributions
-- recipients younger than 25 and many expenditures below $18,000
-- don't throw outliers out just to save summary statistics
-- you must deal with outliers based on what you're trying to model
-- if focus is on demographic age below 50, then throw out outliers
-- if focus is on all age demographics, must keep outliers in
+**Comments**
 
-Questions:
-- Does the skewed, lump pattern hold across ethnicity, age_group, and gender?
-- what should be done about outliers?
+    - It is unusual that age and expenditures have similar distributions
+    - recipients younger than 25 and many expenditures below $18,000
+    - don't throw outliers out just to save summary statistics
+    - you must deal with outliers based on what you're trying to model
+    - if focus is on demographic age below 50, then throw out outliers
+    - if focus is on all age demographics, must keep outliers in
+
+**Questions**
+
+    - Does the skewed, lump pattern hold across ethnicity, age_group, and gender?
+    - what should be done about outliers?
 
 ```{r}
 # code histograms using grid.arrange so can see all quant variables together
@@ -140,3 +160,705 @@ grid.arrange(
 )
 ```
 
+# Step 3 of EDA: Multi-variate Non-Graphical Analysis
+
+    - Non-graphical: *Essentially looking at tables*
+    - with more experience, develop my own checklist for performing EDA depending on data I'm looking at
+        - Better to make sure to get a full understanding of the dataset prior to diving into the particulars
+    - **Don't get hung up on one question!**
+    - multi-variate: relationships between variables
+    - margins: provide totals of rows and total of columns
+    - looking at tables can be limited, hence moving to visuals in Step 4
+
+## Step 3.1 Multi-variate non-graphical - categorical
+
+```{r}
+# contingency/cross tabulation
+dis %>% 
+  tabyl(ethnicity, gender) %>%     # creates table of counts
+  adorn_totals(where = c("row", "col")) %>%     # total margins
+  kable()    # gives light formatting
+
+```
+
+    - Table of COUNTS with margins
+        - total row and column are margins
+        - bottom right cell shows total obs
+
+```{r}
+# proportion contingency/cross tabulation
+dis %>% 
+  tabyl(ethnicity, gender) %>% 
+  adorn_totals(where = c("row", "col")) %>% 
+  adorn_percentages(denominator = "all") %>% 
+  adorn_rounding(2) %>%     # round decimals
+  kable()    # gives light formatting (from knitr)
+
+```
+
+    - Table of PROPORTIONS with margins
+        - bottom right cell totals to 1
+  
+**Comments** 
+
+    - confirms gender split is consistent across ethnicities
+        - indicates we do not need to base our modeling on gender count
+        - still need to look at age_group and expenditure by gender
+    - low count ethnicities are outliers. Remove from dataset
+
+**Questions**
+
+    - need to check ethnicity/gender/expenditure balance
+    - Can we get a larger sample?
+
+## 3.1 - exploring the other variables
+
++ we want to look at **ALL** of these tables for all of our cross tabs and confirm **BALANCE**
+
+```{r}
+# relationship between age_group and gender
+dis %>% 
+  tabyl(age_group, gender) %>% 
+  adorn_totals(where = c("row", "col")) %>% 
+  kable()
+```
+
+```{r}
+# relationship between ethnicity and age_group
+dis %>% 
+  tabyl(ethnicity, age_group) %>% 
+  adorn_totals(where = c("row", "col")) %>% 
+  kable()
+```
+
+**Comments**
+    
+    - age_group count is also split evenly by gender so don't need to model
+    - ethnicities show similar pattern of increase **except Hispanic**
+
+**Questions**
+
+    - still need to check age_group/gender/expenditure **BALANCE**
+
+## 3.1 - three way contingency table
+```{r}
+# relationship between ethnicity, age_group, gender
+dis %>% 
+  tabyl(ethnicity, age_group, gender) %>%    # Tables are categorized by LAST variable (gender)
+  adorn_totals(where = c("row", "col"))
+```
+
+# 3.2 of EDA: Multi-variate non-graphical - Quantitative
+## Correlations
+```{r}
+# Correlation table
+dis %>% 
+  select_if(is.numeric) %>%     # only selecting variables that are NUMERIC
+  cor() %>% 
+  round(2) %>% 
+  kable()
+```
+
+**Comments**
+
+    - large positive correlation between expenditure and age
+
+**Questions**
+
+    - Does positive correlation imply causation: individual expenditures increase with age?
+    - never assume that high correlation means high causation
+
+# Step 4.1 of EDA: Multi-variate - graphical - categorical
+
++ looking for relationships between variables
+
+## 4.1 Multi-variate graphical - categorical
+
+```{r}
+# code univariate bar graphs using grid.arrange so can see graphs together
+grid.arrange(
+  
+  dis %>% 
+    ggplot(mapping = aes(x = ethnicity, fill = age_group)) + 
+    geom_bar(position = "dodge"), 
+  
+  dis %>% 
+    ggplot(mapping = aes(x = age_group, fill = gender)) + 
+    geom_bar(position = "dodge"),
+  
+  dis %>% 
+    ggplot(mapping = aes(x = ethnicity, fill = gender)) +
+    geom_bar(position = "dodge"),
+  
+  ncol = 2
+)
+```
+
+**Comments**
+
+    - there appears to be a difference in age_group across ethnicities
+    - need to take a closer look
+        - gender is closely balanced by ethnicity and age_group
+  
+**Questions**
+
+    - What does it mean if there are differences by age_group across ethnicities?
+
+## 4.1 - alternative view of categorical variables
+- 2 ways to view the same graph
+- flip the axis to be easier to read
+- interesting to see it because it's based off **PROPORTIONS**
+
+```{r}
+# more detail on ethnicity and age
+grid.arrange(
+  # Cluster of counts
+  dis %>% 
+    ggplot(mapping = aes(x = ethnicity, fill = age_group)) + 
+    geom_bar(position = "dodge") + 
+    coord_flip(),
+  
+  dis %>% 
+    ggplot(mapping = aes(x = ethnicity, fill = age_group)) +
+    geom_bar(position = "fill") + 
+    coord_flip(),
+  
+  ncol = 1
+  
+)
+```
+
+**Comments**
+
++ Asian, Black, and White have similar age distributions
+    
+    - Hispanic and Multi-Race have low count for older than 22
+    - recall, cannot make valid statements about the other 3 ethnicities
+
+**Question**
+
+    - How do median expenditures vary for the ethnicity and age_groups?
+    - Need larger sample to determine if low count for older than 22 in Hispanic and Multi Race
+
+# 4.1 - alternative alternative way to view categorical variables
+- tile or mosaic plots show multiple categorical variables 
+
+```{r}
+# Note - have to calculate count and provide a variable for filling the tiles
+dis %>% 
+  group_by(age_group, ethnicity) %>% 
+  summarize(count = n()) %>% 
+  ggplot(aes(age_group, ethnicity)) +
+  geom_tile(aes(fill = count))    # default shows darker being lower count
+        # use fill = -count to flip the color scheme
+```
+
+**Comments**
+
+    - Easy to see difference between Hispanic and White
+        - Asian, Black, and Multi-Race harder to see difference due to lower count
+  
+# 4.2 Multi-variate graphical - quantitative
+- most common is to use scatter plot
+- we only have 2 quantitative variables, so can compare those in 1 visual
+
+```{r}
+# flipped tile scales
+dis %>% 
+  group_by(age_group, ethnicity) %>% 
+  summarize(count = n()) %>% 
+  ggplot(aes(age_group, ethnicity)) +
+  geom_tile(aes(fill = -count))    # default shows darker being lower count
+```
+
+- Problem with this is that the scale is different from the original. But lighter is less and darker is more
+
+```{r}
+# code scatterplots using grid.arrange so can see all quant variables of interest
+dis %>% 
+  ggplot(mapping = aes(x = age, y = expenditures)) + 
+  geom_point()
+```
+
+**Comments**
+
++ Interesting pattern
+  
+    - need to capture distinct groups
+    - 17 under, 18-21, and 22 up are 3 different groups
+
+**Questions**
+
+    - Is the 3 group age/expenditures pattern the same across ethnicities?
+
+# Final Step of EDA: Multi-variate graphical - categorical and quantitative
+- Interplay between Categorical and Quantitative Variables
+- summary statistics of quantitative variables by the factor variables
+1. Scatter plot: with or without "trend" line
+
+    - quantitative variable on each axis
+    - factor variable levels differentiated by color, size, shape, etc
+2. Box plot
+  
+    - categorical/factor variable levels on one axis
+    - box plot of quantitative variable on other axis
+3. Bar graphs: clustered, stacked, proportion
+  
+    - categorical/factor variable levels on one axis
+    - summary of quantitative variable on other axis
+        - sum, mean, median, count, etc
+    - additional factor variable levels with fill()
+4. Heat map: aka mosaic, tile, raster
+  
+    - factor variable on each axis
+    - summary of quantitative variable by shade/color in legend
+        - sum, mean, median, count, etc
+    
+```{r}
+# high level overview of the dataset. 
+# this is like graphical summary statistics
+dis %>% 
+  ggpairs()
+```
+
+**Comments**
+
+    - gender is balanced looking both directins on correlation graph
+
+**Questions**
+
+    - Look more closely at: ethnicity vs. age, ethnicity vs. expenditures
+
+# Step 4.3 - multi-variate graphical - detailed scatter plot
+
+```{r}
+# show code
+grid.arrange(
+  # age, expenditures, and ethnicity
+  dis %>% 
+    ggplot(mapping = aes(x = age, y = expenditures, color = ethnicity)) + 
+    geom_point() + 
+    geom_smooth(method = "lm", se = FALSE), 
+  
+  # age, expenditures, and gender
+  dis %>% 
+    ggplot(mapping = aes(x = age, y = expenditures, color = gender)) + 
+    geom_point() + 
+    geom_smooth(method = "lm", se = FALSE), 
+  
+  ncol = 1
+)
+```
+
+**Comments**
+
+    - Similar relationship between age and expenditures across ethnicities and gender
+        - similar slope lines indicate this
+        - again see no differences by gender
+  
+**Questions** 
+    
+    - Look at the age/expenditure/ethnicity with just large sample ethnicities
+        - try faceted scatter plot
+
+## Same data from scatter plots as boxplots
+
+```{r}
+# show code
+grid.arrange(
+  # age, expenditures, and ethnicity
+  dis %>% 
+    ggplot(mapping = aes(x = ethnicity, y = age)) + 
+    geom_boxplot(), 
+  # age, expenditures, and gender
+  dis %>% 
+    ggplot(mapping = aes(x = ethnicity, y = expenditures)) + 
+    geom_boxplot(), 
+  
+  ncol = 1
+)
+```
+
+**Comments**
+
++ Ethnicity vs age
+    
+    - multi-race has lowest age distribution, small sample n = 26
+    - hispanic has slightly lower age distribution than other large groups
+
++ Ethnicity vs Expenditures
+    
+    - Hispanic and Multi-Race have lowest dstribution of expenditures
+    - could be driven (caused) by age distribution since younger receive less expenditures
+    - there are so many younger Hispanic and small expenditures that older and larger expenditures are relative outliers
+  
+**Questions**
+
+    - Why is the distribution of Hispanic and Multi-Race younger than others?
+
+## Same data from scatter plots and boxplots as bar graphs
+
+```{r}
+# group the median expenditure and age in same graph
+grid.arrange(
+  # Median expenditures by ethnicity and gender
+  dis %>%
+    group_by(ethnicity, gender) %>% 
+    summarise(med_exp_000 = median(expenditures) / 1000) %>% 
+    ggplot(mapping = aes(x = ethnicity, y = med_exp_000, fill = gender)) + 
+    geom_bar(stat = "identity", position = "dodge") +
+    coord_flip(),
+  
+  # median expenditures by ethnicity and gender
+  dis %>% 
+    group_by(ethnicity, gender) %>% 
+    summarise(med_age = median(age)) %>% 
+    ggplot(mapping = aes(x = ethnicity, y = med_age, fill = gender)) + 
+    geom_bar(stat = "identity", position = "dodge") + 
+    coord_flip(), 
+  
+  ncol = 1
+)
+```
+
+**Comments**
+
+    - Median expenditures substantially higher for White Male
+        - Black Male higher than Black Female
+
+**Questions**
+
+    - Need to examine why median expenditures so much more for White Male thatn White Female
+
+
+## Same data from scatter plots and boxplots and bar graphs as mosaic
+
+```{r}
+#Note have to calculate and provide a variable for filling the graph
+dis %>% 
+  group_by(age_group, ethnicity) %>% 
+  summarise(med_exp_000 = median(expenditures) / 1000) %>% 
+  ggplot(aes(age_group, ethnicity)) + 
+  geom_tile(aes(fill = med_exp_000))
+```
+
+**Comments**
+
+    - Factor variable on each axis
+    - expenditures get higher with age
+
+- Base EDA is done to setup the analysis. Foundation required for success of the model and project!
+
+# Detailed EDA
+- Answer questions raised in Base EDA
+
+3 types of EDA's: 
+1. Base EDA - raise questions and learn about data
+2. Detailed EDA - answer and address these questions
+3. Statistical EDA - learn how valid the findings are that we found
+
+    - modeling and other things to better understand what's going on
+
+2 Groups of questions: 
+1. Questions to be answered outside the data
+
+    - don't let the data limit your thought process
+    - can't move outliers that just improves model. must be intentional with these decisions
+
+2. Questions to be answered by further analysis of the data
+
+# Facet Graph
+- create individual graph per factor level
+
+```{r}
+# create vector of ethnicities of interest (remove small sample ethnicities)
+eth_ana <- c("Asian", "Black", "Hispanic", "Multi-Race", "White")
+
+# Faceted histogram without small sample ethnicities
+# facet show individual graph by factor level
+dis %>% 
+  filter(ethnicity %in% eth_ana) %>% 
+  ggplot(mapping = aes(x = expenditures)) + 
+  geom_histogram() + 
+  facet_wrap( ~ ethnicity)
+
+# faceted histogram without small sample age_group
+dis %>% 
+  filter(ethnicity %in% eth_ana) %>% 
+  ggplot(mapping = aes(x = expenditures)) +
+  geom_histogram() + 
+  facet_wrap( ~ age_group)
+
+```
+
+## Are expenditures similar by age_group, ethnicity, or gender?
+
+```{r}
+# faceted scatter plot by ethnicity
+dis %>% 
+  filter(ethnicity %in% eth_ana) %>%   # "%in%" choose whatever is in 'ethnicity' that is also in 'eth_ana'
+  ggplot(mapping = aes(x = age, y = expenditures)) + 
+  geom_point() + 
+  facet_wrap( ~ ethnicity)    # "~" spreads out the specified variable
+```
+
+**Comment**
+
+    - yes, the pattern is consistent across ethnicities
+
+## Do expenditures differ substantially by age_group, ethnicity, or gender?
+
+```{r}
+# age/expenditures relationship differ by age_group
+dis %>% 
+  filter(ethnicity %in% eth_ana) %>% 
+  ggplot(mapping = aes(x = age, y = expenditures)) + 
+  geom_point() + geom_smooth(mapping = aes(color = age_group), method = "lm", se = FALSE)
+```
+
+**Comment**
+
+    - Under 18 age group all act similar
+
+## Why are median expenditures more for White Male than White Female?
+```{r}
+# different views of White ethnicity by gender
+grid.arrange(
+  # Boxplots of expenditures
+  dis %>% 
+    filter(ethnicity == "White") %>% 
+    ggplot(mapping = aes(x = gender, y = expenditures)) + 
+    geom_boxplot(),
+  
+  # Density of expenditures
+  dis %>% 
+    filter(ethnicity == "White") %>% 
+    ggplot(mapping = aes(x = expenditures, fill = gender)) + 
+    geom_density(alpha = 0.5),
+  
+  # Expenditures count
+  dis %>% 
+    filter(ethnicity == "White") %>% 
+    group_by(age_group, gender) %>% 
+    summarize(n = n()) %>% 
+    ggplot(mapping = aes(x = age_group, y = n, fill = gender)) + 
+    geom_bar(stat = "identity", position = "dodge"),
+  
+  # Median Expenditure
+  dis %>% 
+    filter(ethnicity == "White") %>%
+    group_by(age_group, gender) %>% 
+    summarize(med_exp_000 = median(expenditures) / 1000) %>% 
+    ggplot(mapping = aes(x = age_group, y = med_exp_000, fill = gender)) + 
+    geom_bar(stat = "identity", position = "dodge"),
+  
+  ncol = 2
+    
+)
+```
+
+**Comments**
+    
+    - no bias found for White Males. Female expenditures are higher in age_groups except for 22-50. 
+    - Detailed EDA will lead to modeling
+
+
+# Facets
+- separate graphs for each factor level
+- not a geom()
+- different from grid.arrange()
+    - used when trying to show different graphs in the same plot (grouping them together)
+  
+- facets are different because they're the same graphs but for different factor levels
+    - same axes for all graphs
+    - will provide as many graphs as there are factor levels
+    - great for making comparisons
+    
+## Facet wraps
+
+```{r}
+# create facet graph
+dis %>% 
+  group_by(ethnicity) %>% 
+  ggplot(mapping = aes(x = age, y = expenditures)) + 
+  geom_point() + 
+  facet_wrap(~ ethnicity)
+```
+    
+```{r}
+# control columns of facet graph
+dis %>% 
+  group_by(ethnicity) %>% 
+  ggplot(mapping = aes(x = age, y = expenditures)) + 
+  geom_point() + 
+  facet_wrap(~ ethnicity, ncol = 2)
+```
+
+## Facet grids
+- look at facets divided by ethnicity and gender
+- axes tick labels are only on left and bottom
+
+```{r}
+# Create facet grid to examine differencees by Region, Category, and Segment
+dis %>% 
+  group_by(ethnicity, gender) %>% 
+  ggplot(mapping = aes(x = age, y = expenditures)) + 
+  geom_point() + 
+  facet_grid(ethnicity ~ gender)
+```
+
+**comments**
+
+    - these don't differ much by gender
+    
+## Facet grid by different geoms
+- bar and line graphs MUST have summary of data somewhere
+
+
+```{r}
+# create facet grid to examine differences by Region, Category, and Seg
+dis %>% 
+  group_by(age_group, ethnicity, gender) %>% 
+  summarize(med_exp = median(expenditures)) %>% 
+  ggplot(mapping = aes(x = age_group, y = med_exp, fill = age_group)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  facet_grid(ethnicity ~ gender)
+```
+
+```{r}
+# facet grid line graph
+dis %>% 
+  group_by(age_group, ethnicity, gender) %>% 
+  summarize(med_exp = median(expenditures)) %>% 
+  ggplot(mapping = aes(x = age_group, y = med_exp, color = ethnicity)) + 
+  geom_line(mapping = aes(group = ethnicity)) + 
+  facet_grid(ethnicity ~ gender)
+```
+
+# Line Graphs
+
++ Line graphs imply motion
+
+    - do not use to connect factor variables (gender, color...why connect these?)
+    - possible to connect ordered factors
+    
++ Most often used with time series
+
+    - comparisons over time
+    - summary over time
+        - median expenditure per time perios
+        
++ Key: Implied continuity along x-axis
+
+    - some kind of motion
+    - like a scatter plot, where causation related to time
+    
++ Must have a time component (date variable)
+
+```{r}
+# Create random dates for making line graphs
+dis$date <- sample(seq(as.Date("2015/01/01"), as.Date("2018/01/01"), by = "month"), 1000, replace = TRUE)
+
+# View data with date
+summary(dis)
+```
+
+```{r}
+# Look at expenditures over time
+ggplot(data = dis, mapping = aes(x = date, y = expenditures)) + 
+  geom_line()
+```
+
+**Comments**
+
+    - all expenditures are being measured on a specific month
+    - we're getting obs that the line graph is trying to connect on the same date, hence VERTICLE Line
+    - Instead could show summary statistic for each month
+    
+```{r}
+# look at median expenditures over time
+dis %>% 
+  group_by(date) %>% 
+  summarize(med_exp = median(expenditures)) %>% 
+  ggplot(mapping = aes(x = date, y = med_exp)) + 
+  geom_line()
+```
+
+**Comments**
+
+    - show quantitative varibales over time
+    - could show the count of a factor over time
+    - must make a quantitative variable related to the factor
+    
+## Median expenditures over time by age_group
+
+```{r}
+# Look at median expenditures over time
+dis %>% 
+  group_by(date, age_group) %>% 
+  summarize(med_exp = median(expenditures)) %>% 
+  ggplot(mapping = aes(x = date, y = med_exp, linetype = age_group)) + 
+  geom_line()
+  
+```
+
+- Note: color = age_group differentiates factor levels
+
+```{r}
+# Look at median expenditures over time
+dis %>% 
+  group_by(date, age_group) %>% 
+  summarize(med_exp = median(expenditures)) %>% 
+  ggplot(mapping = aes(x = date, y = med_exp, color = age_group)) + 
+  geom_line()
+```
+
+## Look at all factor variables
+
+```{r}
+# use grid.arrange to put graphs together
+grid.arrange(
+  # graph mean annual profit over time by Region
+  dis %>% 
+    group_by(date, age_group) %>% 
+    summarize(med_exp = median(expenditures)) %>% 
+    ggplot(mapping = aes(x = date, y = med_exp, color = age_group)) + 
+    geom_line(), 
+  
+  # graph mean annual profit over time by Category
+  dis %>% 
+    group_by(date, ethnicity) %>% 
+    summarize(med_exp = median(expenditures)) %>% 
+    ggplot(mapping = aes(x = date, y = med_exp, color = ethnicity)) + 
+    geom_line(), 
+  
+  # graph mean annual profit over time by Segment
+    dis %>% 
+    group_by(date, gender) %>% 
+    summarize(med_exp = median(expenditures)) %>% 
+    ggplot(mapping = aes(x = date, y = med_exp, color = gender)) + 
+    geom_line(), 
+  
+  ncol = 2
+)
+```
+
+**Comments**
+
+    - if using black and white printing, need to do "linestyle = x" rather than "color = x"
+    - avoid spaghetti graph
+    - avoid squishing lines
+    
+
+## with ordered factor variables
+
+```{r}
+# Look at median expenditures by age_group and ethnicity
+dis %>% 
+  group_by(age_group, ethnicity) %>% 
+  summarize(med_exp = median(expenditures)) %>% 
+  ggplot(mapping = aes(x = age_group, y = med_exp, color = ethnicity)) + 
+  geom_line(mapping = aes(group = ethnicity)) 
+```
+
++ change over time where the quantity really means something

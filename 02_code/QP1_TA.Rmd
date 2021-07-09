@@ -1,0 +1,1105 @@
+---
+title: 'Quick Project #1'
+author: "Andrew Nalundasan"
+date: "7/8/2021"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+---
+
+```{r}
+# Course: OMSBA 5210
+# Purpose: Quick Project # 1
+# Date: July 8, 2021
+# Author: Andrew Nalundasan
+```
+
+# Load Libraries
+
+```{r}
+# The tidyverse package contains ggplot2, dplyr, and several other packages
+library(tidyverse)
+
+# The gridExtra package contains grid.arrange function used to combine plots in the same window
+library(gridExtra)
+
+# The janitor package contains tidyverse functions for cross-tables
+library(janitor)
+
+# The knitr package contains some table formatting functions
+library(knitr)
+
+# The GGally package contains a custom correlation plot
+library(GGally)
+
+# vtable for reppin NHK
+library(vtable)
+
+# correlation matrix
+library(corrplot)
+
+# to get $ and , on axis in graph
+library(scales)
+
+```
+
+# Load data
+
+```{r}
+# Load and prepare data 
+zillow <- read_csv("../03_raw_data/qp1_data.csv")
+
+# look at the data
+zillow
+```
+
+# Base EDA Step 1: Uni-variate non-graphical EDA
+
+```{r}
+# top of the dataset
+head(zillow)
+```
+
++ data appears to be tidy
+
+    - data in each column is of the same variable type
+    - no duplicate columns
+    - each row is an observation for the sale of a specific home
+
+```{r}
+# check the structure of the data
+vtable(zillow)
+```
+
++ 3 continuous integer variables
+
+    - price, sqft_living, sqft_lot
+    
++ factor variables
+
+    - waterfront: binary yes/no
+    - view: 5 ordered levels
+    - grade: 13 ordered levels 
+    - condition: 5 ordered levels
+    - bedrooms: outlier of 33?
+    - bathrooms: outlier of 8?
+    - floors
+
+```{r}
+# check descriptive statistics of the data
+summary(zillow)
+```
+
+**Comments**
+
+    - mean home price is 0.5+ million. sounds about right
+        - appear to be right-skewed because mean >> median
+            - median home price will be more representative than mean
+        - 7.7 MM max is really high compared to mean of 0.5 MM. 
+  
+    - is max 33 bedrooms an outlier?
+        - much higher than 3rd quartile of 4
+        
+    - is max 8 bathrooms an outlier?
+        - much higher than 3rd quartile of 2.5
+        
+    - is max 13540 sqft_living an outlier?
+        - appear to be right-skewed because mean >> median
+            - median more representative than mean
+        - much higher than 3rd quartile of 2550
+        
+    - is max 1651359 sqft_lot an outlier?
+        - appear to be right-skewed because mean >> median
+            - median more representative than mean
+        - much higher than 3rd quartile of 10688
+        
+    - floors seem evenly distributed
+    
+    - waterfront is binary yes/no
+    
+    - seems like not many houses have a nice view
+    
+    - is max 13 grade an outlier?
+        - much higher than 3rd quartile of 8
+        
+    - condition seems evenly distributed
+    
+    - is 1900 yr_built an outlier?
+        - much older than 1st quartile of 1951 and mean of 1971
+        
+    - yr_renovated looks odd
+    
+    
+**Questions**
+
++ What's the relationship between price and # bedrooms, # bathrooms, sqft_living/sqft_lot, # floors?
+
++ What's the relationship between price and grade or condition?
+
++ what's the relationship between price and zip_code?
+
++ MAIN QUESTION for me: What drives price?
+
+
+# Base EDA Step 2: Uni-variate graphical EDA
+
+- Examine each variable individually
+- Examine how many observations in each variable
+
+## Factor variables
+
+- show all factor variables together
+
+```{r}
+# Only use bar graphs (like histogram) because nothing like boxplot for cateorical variables
+grid.arrange(
+
+# waterfront
+ggplot(data = zillow, mapping = aes(x = waterfront)) +
+  geom_bar(),
+
+# view
+ggplot(data = zillow, mapping = aes(x = view)) +
+  geom_bar(), 
+
+# grade
+ggplot(data = zillow, mapping = aes(x = grade)) +
+  geom_bar(),
+
+# condition
+ggplot(data = zillow, mapping = aes(x = condition)) + 
+  geom_bar(),
+
+ncol = 2 )
+```
+
+**Comments**
+
+    - Waterfront property is rare
+    - Homes with a view better than 0 are rare
+    - Most homes are grade 7-8
+    - Most homes have condition of 3
+    - Most homes have 3 bedrooms
+    - Most homes have 2.5 bathrooms or less
+    
+**Questions**
+
++ Is price distribution representative of these variables?
+
+## Other variables
+
+- show all other variables together
+
+```{r}
+# Only use bar graphs (like histogram) because nothing like boxplot for categorical variables
+grid.arrange(
+
+# bedrooms
+zillow %>% 
+  ggplot(mapping = aes(x = bedrooms)) + 
+  geom_bar(),
+
+# bathrooms
+zillow %>% 
+  ggplot(mapping = aes(x = bathrooms)) + 
+  geom_bar(),
+
+# sqft_living
+zillow %>% 
+  ggplot(mapping = aes(x = sqft_living)) +
+  geom_bar(),
+
+# floors
+ggplot(data = zillow, mapping = aes(x = floors)) +
+  geom_bar(),
+
+# zip_code
+ggplot(data = zillow, mapping = aes(x = zip_code)) +
+  geom_bar(),
+
+# yr_built
+ggplot(data = zillow, mapping = aes(x = yr_built)) +
+  geom_bar(),
+
+# yr_renovated
+zillow %>% 
+  filter(yr_renovated > 1925) %>% 
+  ggplot(mapping = aes(x = yr_renovated)) + 
+  geom_bar(),
+
+ncol = 2)
+```
+
+**Comments**
+
+    - record with 33 bedrooms is throwing off my data
+    - records with 4+ bathrooms throwing off my data
+    - records with 5000+ sqft_living throwing off my data
+    - most homes have either 1 or 2 floors
+        - split levels are rare
+        - 3 floors are rare
+    - not sure what to do about zip_codes
+    - big dip during great depression (30s) and WWII (40s) for homes built
+        - boom in houses built in 50s post war, along with Baby Boomer generation
+        - assumption that home building slows down during war times
+        - Vietnam War in 60s
+        - Cold War/Gulf War in 80s - 90s?
+    - housing bubble burst in 00s
+    - home renovations increase from 1980 onward
+    
+**Questions**
+
++ Is price distribution representative of these variables?
+
++ How does price fluctuate with yr_built?
+
+```{r}
+# Removing outliers
+grid.arrange(
+
+# bedrooms
+  zillow %>% 
+    filter(bedrooms < 5) %>% 
+    ggplot(mapping = aes(x = bedrooms)) +
+    geom_bar(),
+  
+  # bathrooms
+  zillow %>% 
+    filter(bathrooms < 4) %>% 
+    ggplot(mapping = aes(x = bathrooms)) + 
+    geom_bar(), 
+  
+  # sqft_living
+  zillow %>% 
+    filter(sqft_living < 4000) %>% 
+    ggplot(mapping = aes(x = sqft_living)) +
+    geom_bar(),
+  
+  # yr_renovated
+  zillow %>% 
+    filter(yr_renovated > 1975) %>% 
+    ggplot(mapping = aes( x = yr_renovated)) + 
+    geom_bar(),
+
+  ncol = 1)
+
+```
+
+**Comments**
+
+    - filtered bedrooms to show < 5
+    - filtered bathrooms to show < 4
+    - filtered sqft_living to show < 4000
+
+## Quantitative variables
+
+### Price
+
+```{r}
+# price
+grid.arrange(
+  # add histogram
+  ggplot(data = zillow, mapping = aes(x = price)) +
+    geom_histogram() + 
+    scale_x_continuous(labels = dollar), 
+  
+  # add boxplot
+  ggplot(data = zillow, mapping = aes(x = 1)) + 
+    geom_boxplot(mapping = aes(y = price)) + 
+    scale_y_continuous(labels = dollar) + 
+    coord_flip()
+)
+```
+
+**Comments**
+
+    - Confirms there is a skewed distribution
+        - Use median rather than mean
+        - 2+MM are all outliers
+    
+**Questions**
+
++ Does price differ substantially by my factor variables?
+
++ should I remove 2+ MM from dataset?
+
+```{r}
+# price with outliers removed
+grid.arrange(
+  # add histogram
+  zillow %>% 
+    filter(price < 2000000) %>% 
+    ggplot(mapping = aes(x = price)) +
+    geom_histogram() + 
+    scale_x_continuous(labels = dollar), 
+
+  # add boxplot
+  zillow %>%
+    filter(price < 2000000) %>% 
+    ggplot(mapping = aes(x = 1)) + 
+    geom_boxplot(mapping = aes(y = price)) + 
+    scale_y_continuous(labels = dollar) + 
+    coord_flip()
+)
+```
+
+**Comments**
+
+    - Median price is 450k
+    
+**Questions**
+
++ When were the houses built where price <= 450k?
+
+### Square Foot Living
+
+```{r}
+# sqft_living
+grid.arrange(
+  # add histogram
+  zillow %>% 
+    filter(sqft_living < 4000) %>% 
+    ggplot(mapping = aes(x = sqft_living)) +
+    geom_histogram(), 
+  
+  # add boxplot
+  zillow %>% 
+    filter(sqft_living < 4000) %>% 
+    ggplot(mapping = aes(x = 1)) + 
+    geom_boxplot(mapping = aes(y = sqft_living)) + 
+    coord_flip()
+)
+```
+
+**Comments**
+
+    - Confirms there is a skewed distribution
+    - majority of homes < 4000 sqft_living
+        - kept filter consistent to show < 4000 sqft_living
+    
+**Questions**
+
++ Does sqft_living differ substantially by my factor variables?
+
++ I wonder how price is distributed according to sqft_living?
+
+### Square Foot Lot
+
+```{r}
+# sqft_lot
+grid.arrange(
+  # add histogram
+  zillow %>% 
+  filter(sqft_lot < 10000) %>% 
+  ggplot(mapping = aes(x = sqft_lot)) +
+    geom_histogram(), 
+  
+  # add boxplot
+  zillow %>% 
+  filter(sqft_lot < 10000) %>% 
+  ggplot(mapping = aes(x = 1)) + 
+    geom_boxplot(mapping = aes(y = sqft_lot)) + 
+    coord_flip()
+)
+```
+
+**Comments**
+
+    - Left-skewed distribution
+    
+**Questions**
+
++ How is price distributed according to sqft_lot?
+
+
+# Base EDA Step 3: Multi-variate non-graphical
+
+## Categorical 
+
+```{r}
+# Contingency/cross table
+
+zillow %>% 
+  tabyl(grade, waterfront) %>%     # creates table of counts
+  adorn_totals(where = c("row", "col")) %>%    # Total margins
+  kable() %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped")
+
+```
+
+
+```{r}
+# Proportion contingency/cross table
+zillow %>% 
+  tabyl(grade, waterfront) %>% 
+  adorn_totals(where = c("row", "col")) %>% 
+  adorn_percentages(denominator = "all") %>% # creates proportions
+  adorn_rounding(2) %>%  # round decimals
+  kable() %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped")
+```
+
+
+**Comments**
+
+    - 99% of homes do NOT have waterfront view
+    - Most number of waterfront homes are grade 8 (40 obs)
+    - grade 7 and grade 8 non-waterfront are majority of homes
+    - low number of homes grade 11+
+    
+    
+**Questions**
+
++ how important is waterfront property?
+
+    - Decision to remove waterfront from analysis
+
+```{r}
+zillow %>% 
+  tabyl(grade, view) %>%     # creates table of counts
+  adorn_totals(where = c("row", "col")) %>%    # Total margins
+  kable() %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped")
+  
+```
+
+```{r}
+# Proportion contingency/cross table
+zillow %>% 
+  tabyl(grade, view) %>% 
+  adorn_totals(where = c("row", "col")) %>% 
+  adorn_percentages(denominator = "all") %>% # creates proportions
+  adorn_rounding(2) %>%  # round decimals
+  kable() %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped")
+```
+
+**Comments**
+
+    - 70% of homes rated grade 7 and grade 8
+    - 90% of homes do not have a view (view = 0)
+        - besides homes with no view, homes with view = 2 has the most (4%)
+        
+**Questions**
+
++ Why don't these homes have views?
+
++ When were the homes with view = 0 built?
+
+```{r}
+zillow %>% 
+  tabyl(grade, condition) %>%     # creates table of counts
+  adorn_totals(where = c("row", "col")) %>%    # Total margins
+  kable() %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped")
+```
+
+
+```{r}
+# Proportion contingency/cross table
+zillow %>% 
+  tabyl(grade, condition) %>% 
+  adorn_totals(where = c("row", "col")) %>% 
+  adorn_percentages(denominator = "all") %>% # creates proportions
+  adorn_rounding(2) %>%  # round decimals
+  kable() %>% 
+  kableExtra::kable_styling(bootstrap_options = "striped")
+  
+```
+
+**Comments**
+
+    - 65% of homes are condition = 3
+        - condition = 4 is next highest at 26%
+
+**Questions**
+
++ How does price differ between condition = 3 and condition = 4?
+
+## Quantitative
+
+```{r}
+# Correlation table
+mcor <- cor(zillow, use="complete.obs")    # use="complete.obs" will get rid of NA's from dataset and remove NA's from matrix
+
+# Print mcor and round to 2 digits
+round(mcor, digits=2)
+```
+
+**Comments**
+
+    - so many variables to look at, need to see this in a different visual
+
+```{r}
+# correlation matrix
+corrplot(mcor)
+```
+
+**Comments**
+
+    - Colors are hard to match up. Still difficult to interpret
+
+```{r}
+# updates to correlation matrix
+corrplot(mcor, method = "shade", shade.col = NA, tl.col = "black", tl.srt = 45)
+```
+
+**Comments**
+
+    - sqft_lot not correlated with anything
+    - price highly correlated with bathrooms, sqft_living, grade
+    - sqft_living highly correlated with price, bathrooms, grade
+    - zip_code has lower correlation on price than I assumed
+        - mostly negative correlations
+    - bathrooms have higher correlation with price than bedrooms
+        
++ variables of interest
+
+    - price on:
+      - bathrooms: 0.53
+      - sqft_living: 0.70
+      - grade: 0.67
+
+**Questions**
+
++ How does price distribution look between bathrooms, sqft_living, and grade?
+
+```{r}
+# generate a lighter palette
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+
+corrplot(mcor, method = "shade", shade.col = NA, tl.col = "black", tl.srt = 45,
+         col = col(200), addCoef.col = "black", cl.pos = "n", order = "AOE")
+```
+
+**Comments**
+
+    - colors and numbers work, but too squished. 
+    - will use other correlation matrix from above
+    
+
+# Base EDA Step 4: Multi-variate graphical
+
+## Step 4.1: Categorical
+
+- Bar graphs with multiple categorical variables
+- Focus on grade and bathrooms as main categorical variables
+
+```{r}
+# Code univariate bar graphs using grid.arrange so can see graphs together
+
+# Create vector of bathrooms want to analyze
+bath <-  c("1", "1.5", "2", "2.5", "3", "3.5", "4")
+bath <- as.factor(bath)
+
+grid.arrange(
+  
+  zillow %>% 
+    mutate(condition = as.factor(condition)) %>% 
+    ggplot(mapping = aes(x = grade, fill = condition)) + 
+    geom_bar(position = "dodge"),
+  
+  zillow %>% 
+    mutate(view = as.factor(view)) %>%
+    ggplot(mapping = aes(x = grade, fill = view)) + 
+    geom_bar(position = "dodge"),
+  
+  zillow %>%
+    filter(bathrooms %in% bath) %>% 
+    mutate(bathrooms = as.factor(bathrooms)) %>% 
+    ggplot(mapping = aes(x = grade, fill = bathrooms)) + 
+    geom_bar(position = "dodge"), 
+  
+  ncol = 2
+)
+
+
+```
+
+**Comments**
+
+    - needed to mutate numerical variables as factors
+    - confirms knowledge about condition, and view
+        - homes in great condition (5) are low
+    - grades 7 and 8 have most observations
+        - most homes have either 1 or 2.5 bathrooms
+
+**Questions**
+
++ are the condition = 5 homes brand new built homes or newly renovated homes?
+
+## Categorical - condition/grade
+
+```{r}
+# More detail on condition and grade
+grid.arrange(
+  # Cluster of counts
+  zillow %>% 
+    mutate(condition = as.factor(condition)) %>% 
+    ggplot(mapping = aes(x = grade, fill = condition)) + 
+    geom_bar(position = "dodge") + 
+    coord_flip(), 
+  
+  # proportion of counts
+  zillow %>% 
+    mutate(condition = as.factor(condition)) %>% 
+    ggplot(mapping = aes(x = grade, fill = condition)) + 
+    geom_bar(position = "fill") + 
+    coord_flip()
+)
+```
+
+**Comments**
+
+    - condition = 4 is consistent across grades 5-7
+    - condition = 3 is is majority of most grades
+        - grade 3 condition has the most homes in top condition
+    - all grade 0 homes have condition = 1
+    
+**Questions** 
+
++ how does price vary by grade and condition
+
+```{r}
+# Tile graph - need count
+zillow %>% 
+  group_by(condition, grade) %>% 
+  summarize(count = n()) %>% 
+  ggplot(aes(condition, grade)) + 
+  geom_tile(aes(fill = -count))
+```
+
+**Comments**
+
+    - grades 7-8 mostly condition = 3
+
+## Step 4.2: Quantitative
+
+```{r}
+# Code scatterplots using grid.arrange so can see all quant variables together
+grid.arrange(
+  # price on bathrooms
+  zillow %>% 
+    filter(bathrooms < 4) %>% 
+    ggplot(mapping = aes(x = bathrooms, y = price)) + 
+    geom_point(position = "jitter") + 
+    scale_y_continuous(labels = dollar), 
+  
+  # price on bedrooms
+  zillow %>% 
+    filter(bedrooms < 5) %>% 
+    ggplot(mapping = aes(x = bedrooms, y = price)) + 
+    geom_point(position = "jitter") + 
+    scale_y_continuous(labels = dollar),
+  
+  # price on sqft_living
+  zillow %>% 
+    filter(sqft_living < 4000) %>% 
+    ggplot(mapping = aes(x = sqft_living, y = price)) + 
+    geom_point(position = "jitter") +    # can't see points all on a single line. Jitter helps see multiple points on same point
+    scale_y_continuous(labels = dollar),
+  
+  # price on grade
+  zillow %>% 
+    ggplot(mapping = aes(x = grade, y = price)) + 
+    geom_point(position = "jitter") + 
+    scale_y_continuous(labels = dollar), 
+  
+  # price on condition
+  zillow %>% 
+    ggplot(mapping = aes(x = condition, y = price)) + 
+    geom_point(position = "jitter") + 
+    scale_y_continuous(labels = dollar), 
+  
+  # price on yr_built
+  zillow %>% 
+    ggplot(mapping = aes(x = yr_built, y = price)) + 
+    geom_point(position = "jitter") + 
+    scale_y_continuous(labels = dollar), 
+  
+  # price on yr_renovated
+  zillow %>% 
+    filter(yr_renovated > 1990) %>%   # removed outliers
+    ggplot(mapping = aes(x = yr_renovated, y = price)) + 
+    geom_point(position = "jitter") + 
+    scale_y_continuous(labels = dollar), 
+  
+  # price on zip_code
+  zillow %>% 
+    ggplot(mapping = aes(x = zip_code, y = price)) + 
+    geom_point(position = "jitter") + 
+    scale_y_continuous(labels = dollar), 
+  
+  ncol = 2
+)
+
+
+```
+
+**Comments**
+
+    - price positively correlated with most variables, this makes sense
+        - more bathrooms, higher price
+        - more bedrooms, higher price
+        - more sqft_living, higher price
+    - price higher at condition = 3 and condition = 4
+        - condition = 5 does not guarantee high price
+    - price does not increase with more recent renovations
+        - filtered yr_renovated to focus on 1990 onward
+    - price not effected much by yr_built
+    
+**Questions**
+
++ Why is price higher at condition = 3 and condition = 4 than condition = 5?
+
+    - perhaps because count of condition = 5 is lower?
+    
++ What is relationship between grade and yr_renovated?
+
+    - are house flippers getting sloppy?
+    
+## Step 4.3: Categorical and quantitative
+
+```{r}
+grid.arrange(
+  # condition, price, grade
+  zillow %>% 
+    mutate(condition = as.factor(condition)) %>% 
+    ggplot(mapping = aes(x = grade, y = price, color = condition)) + 
+    geom_point(position = "jitter") + 
+    scale_y_continuous(labels = dollar) + 
+    geom_smooth(method = "lm", se = FALSE), 
+  
+  # price, bedrooms, bathrooms
+  zillow %>% 
+    filter(bedrooms < 5) %>% 
+    filter(bathrooms %in% bath) %>% 
+    mutate(bathrooms = as.factor(bathrooms)) %>% 
+    ggplot(mapping = aes(x = bedrooms, y = price, color = bathrooms)) + 
+    geom_point(position = "jitter") + 
+    scale_y_continuous(labels = dollar) + 
+    geom_smooth(method = "lm", se = FALSE),
+  
+  # price, grade, yr_renovated
+  zillow %>% 
+    filter(yr_renovated > 1990) %>% 
+    mutate(grade = as.factor(grade)) %>% 
+    ggplot(mapping = aes(x = yr_renovated, y = price, color = grade)) + 
+    geom_point(position = "jitter") + 
+    scale_y_continuous(labels = dollar) + 
+    geom_smooth(method = "lm", se = FALSE)
+    
+)
+```
+
+**Comments**
+
++ Similar relationship between grade and price and bedrooms and price
+
+    - can tell by similar slope lines
+    - filtered bedrooms to focus on bedrooms < 5
+    - filtered bathrooms to focus on bathrooms < 4
+    
++ yr_renovated and grade don't drive price as I expected it would
+    
+
+**Questions**
+
++ Try faceted box plots
+
+```{r}
+grid.arrange(
+  # grade vs price
+  zillow %>% 
+    mutate(grade = as.factor(grade)) %>% 
+    ggplot(mapping = aes(x = grade, y = price)) + 
+    geom_boxplot() + 
+    scale_y_continuous(labels = dollar), 
+  
+  # condition vs price
+  zillow %>% 
+    mutate(condition = as.factor(condition)) %>% 
+    filter(price < 4000000) %>% 
+    ggplot(mapping = aes(x = condition, y = price)) + 
+    geom_boxplot() + 
+    scale_y_continuous(labels = dollar), 
+  
+  
+  # bathrooms vs price
+  zillow %>% 
+    filter(bathrooms %in% bath) %>% 
+    mutate(bathrooms = as.factor(bathrooms)) %>% 
+    ggplot(mapping = aes(x = bathrooms, y = price)) + 
+    geom_boxplot() + 
+    scale_y_continuous(labels = dollar)
+)
+```
+
+**Comments**
+
++ grade, condition, bathrooms vs price
+
+    - price is most effected by grade compared to condition or bathrooms
+    - price increases with increasing grade and bathrooms; makes sense
+    
+**Questions**
+
++ Why does median price drop between condition 3 and condition 4?
+
+# Detailed EDA - questions raised in Base EDA 
+
+## Does price differ by grade or condition?
+
+```{r}
+# Faceted scatter plot by grade
+zillow %>% 
+  ggplot(mapping = aes(x = grade, y = price)) + 
+  geom_point(position = "jitter") + 
+  facet_wrap( ~ condition) + 
+  scale_y_continuous(labels = dollar)
+```
+ 
+```{r}
+# Faceted scatter plot by condition
+zillow %>% 
+  ggplot(mapping = aes(x = condition, y = price)) + 
+  geom_point(position = "jitter") + 
+  facet_wrap( ~ grade) + 
+  scale_y_continuous(labels = dollar)
+```
+
+ **Comments**
+ 
+    - the pattern is consistent across conditions
+    - majority of observations found in condition 3 and condition 4
+    
+## How does price vary by condition, grade, and bathrooms?
+
+```{r}
+# price relationship differ by condition and bathrooms
+grid.arrange(
+  # condition
+zillow %>% 
+  mutate(condition = as.factor(condition)) %>% 
+  filter(price < 4000000) %>% 
+  ggplot(mapping = aes(x = grade, y = price)) +
+  geom_point(position = "jitter") +
+  scale_y_continuous(labels = dollar) + 
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)) + 
+  geom_smooth(mapping = aes(color = condition), method = "lm", se = FALSE),
+
+  # bathrooms
+zillow %>% 
+  filter(price < 4000000) %>% 
+  filter(bathrooms %in% bath) %>% 
+  mutate(bathrooms = as.factor(bathrooms)) %>% 
+  ggplot(mapping = aes(x = grade, y = price)) +
+  geom_point(position = "jitter") +
+  scale_y_continuous(labels = dollar) + 
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)) + 
+  geom_smooth(mapping = aes(color = bathrooms), method = "lm", se = FALSE), 
+
+  # sqft_living
+zillow %>% 
+  filter(price < 4000000) %>% 
+  filter(sqft_living < 6000) %>% 
+  filter(bathrooms %in% bath) %>% 
+  mutate(bathrooms = as.factor(bathrooms)) %>% 
+  ggplot(mapping = aes(x = sqft_living, y = price)) +
+  geom_point(position = "jitter") +
+  scale_y_continuous(labels = dollar) + 
+  geom_smooth(method = "lm", se = FALSE)
+
+)
+```
+
+**Comments - condition**
+
+    - condition intersects for all conditions at grade 7
+        - homes with sub grade 7 rating has odd distribution
+        - likely due to counts of homes with higher condition being low for lower grade homes
+        - counts of grade 3 homes with condition 5 are low; this makes sense
+    - higher grade, higher price; makes sense
+    - higher condition, steeper slope
+    - price has positive correlation with both grade and condition
+
+**Comments - bathrooms**
+
+    - 4 bathroom houses are most expensive; makes sense
+    - 4 bathroom homes have higher price points with higher grades
+        - if sellers can improve the grade of their homes, they will be able to sell at much higher prices, even at grade 7
+    - even a grade 9 homes with 1 bathroom won't sell for much. might be worth looking into renovating additional bathrooms to the house
+    - grade 6 homes with 3.5 bathrooms sell lower than grade 6 homes with 3 bathrooms
+        - values of 3.5 bathroom home isn't valued higher than 3 bathroom until it reaches grade 10
+        - market seems to value 3 bathroom homes more than 3.5 bathrooms unless the 3.5 bathroom home has higher grade
+
+```{r}
+# price relationship differ -  bathrooms
+vis_01 <- zillow %>% 
+  filter(price < 4000000) %>% 
+  filter(bathrooms %in% bath) %>% 
+  mutate(bathrooms = as.factor(bathrooms)) %>% 
+  ggplot(mapping = aes(x = grade, y = price)) +
+  geom_point(position = "jitter") +
+  scale_y_continuous(labels = dollar) + 
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)) + 
+  geom_smooth(mapping = aes(color = bathrooms), method = "lm", se = FALSE) + 
+  labs(x = "Grade", 
+       y = "Price", 
+       title = "Home pricing trends with respect to Grades and Bathrooms")
+
+vis_01
+
+# save this visual for memo
+ggsave(filename = "vis_01.png", plot = vis_01)
+```
+
+
+## What is relationship between grade and yr_renovated?
+
+```{r}
+grid.arrange(
+zillow %>% 
+  filter(yr_renovated > 1975) %>% 
+  mutate(grade = as.factor(grade)) %>% 
+  ggplot(mapping = aes(x = yr_renovated, fill = grade)) + 
+  geom_bar(), 
+
+# proportion of counts
+zillow %>% 
+  filter(yr_renovated > 1975) %>% 
+  mutate(grade = as.factor(grade)) %>%
+  ggplot(mapping = aes(x = yr_renovated, fill = grade)) + 
+  geom_bar(position = "fill")
+)
+  
+```
+
+```{r}
+# proportion of counts
+vis_02 <- zillow %>% 
+  filter(yr_renovated > 1975) %>% 
+  mutate(grade = as.factor(grade)) %>%
+  ggplot(mapping = aes(x = yr_renovated, fill = grade)) + 
+  geom_bar(position = "fill") + 
+  labs(x = "Year Renovated", 
+       y = "Proportion", 
+       title = "Proportion or grade rating with year renovated")
+
+vis_02
+
+# save this visual for memo
+ggsave(filename = "vis_02.png", plot = vis_02)
+```
+
+
+**Comments**
+
+    - Renovations seem to be made to achieve grade 7, 8 or 9
+
+**Questions**
+
++ Why aren't renovations being made to achieve higher than grade 9 rating? This would increase property value
+    
+## Are the condition = 5 homes brand new built homes or newly renovated homes?
+    
+```{r}
+grid.arrange(
+  
+zillow %>% 
+  filter(yr_built > 1920) %>% 
+  ggplot(mapping = aes(x = condition, y = yr_built)) + 
+    geom_point(position = "jitter"), 
+
+zillow %>% 
+  filter(yr_renovated > 1920) %>% 
+  ggplot(mapping = aes(x = condition, y = yr_renovated)) + 
+    geom_point(position = "jitter")
+  )
+  
+```
+
+**Comments**
+
+    - Majority of condition 5 homes were built that way, not renovated that way
+    
+**Questions**
+
++ How does price compare between yr_built and yr_renovated?
+
+```{r}
+grid.arrange(
+  # Look at median price over time
+  zillow %>% 
+    filter(yr_built > 1920) %>% 
+    group_by(yr_built) %>% 
+    summarize(med_price = median(price)) %>% 
+    filter(med_price < 900000) %>% 
+    ggplot(mapping = aes(x = yr_built, y = med_price)) + 
+    geom_line() + 
+    scale_y_continuous(labels = dollar, limits = c(300000, 900000)),
+  
+  zillow %>% 
+    filter(yr_renovated > 1920) %>%   # remove outliers and follow same timeline as yr_built
+    group_by(yr_renovated) %>% 
+    summarize(med_price = median(price)) %>% 
+    ggplot(mapping = aes(x = yr_renovated, y = med_price)) + 
+    geom_line() + 
+    scale_y_continuous(labels = dollar, limits = c(300000, 900000))
+    
+)
+```
+
+**Comments**
+
++ In 2010, price it was more expensive to buy a newly renovated home than it was to buy a newly built home
+
+    - In 2015, median price for a newly built home vs a newly renovated home was relatively the same
+    
++ Interesting that price is similar in 2015 between both yr_built and yr_renovated. 
+
+    - I would have assumed that newly built would always be higher price point than newly renovated
+    - Houses aren't flipping for much. House flippers couldn't beat the market in 2015
+    - Houses could be flipped for a profit between 1990 - ~2008
+    
++ More spikes in price when looking at yr_renovated compared to yr_built
+
+    - 90s and 00s had higher prices for yr_renovated
+        - This indicates sellers markets to me - buy low, sell high
+    
++ gaps in yr_renovated data in 50s, 60s and 80s
+
+**Questions**
+
++ No further questions
+
+
+# Summary
+
+After extensive exploration of this dataset, the following key takeaways have been learned
+
+1. The King County housing market is flooded with homes with grade ratings of grade 7, grade 8, and grade 9. 
+
+2. Grade was found to be the second highest correlated variable to price, highest being sqft_living. 
+
+3. Number of bathrooms was found to be the third highest correlated variable to price
+
+4. Renovations have increased in popularity from 1980 onward. 
+
+    - Depending on housing market conditions, newly renovated homes are valued higher than newly built homes 
+
+5. Renovations appear to achieve grade 7, grade 8 or grade 9. Sellers should focus on achieving higher than grade 9 ratings to increase their property value. 
+
+    - Home owners with more bathrooms and a higher grade home have highly valued homes
+
+6. Potential further research: 
+
+    - Have home renovations increased due to the pandemic?
+    - Have sales at Home Depot, Lowes, and other DIY retail increased due to the pandemic?
+    - Have sales of contractor services increased due to the pandemic?
+    - Have sales of raw construction materials increased due to the pandemic?
+
+
