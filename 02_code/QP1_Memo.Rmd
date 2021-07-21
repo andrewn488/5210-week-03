@@ -23,6 +23,7 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 # Purpose: Memo for Quick Project #1
 # Date: July 8, 2021
 # Author: Andrew Nalundasan
+# Pushing commits: 7/21/2021
 ```
 
 

@@ -41,3 +41,4 @@ vignettes/*.pdf
 # ignore file types
 *.csv
 *.html
+*.pdf
